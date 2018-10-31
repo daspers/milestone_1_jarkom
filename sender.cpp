@@ -90,8 +90,13 @@ void fill_int_to_bytes(uint8_t *data, uint32_t val){
 	}
 }
 
-uint8_t checksum(const uint8_t *data, uint32_t len){
-	return 0;
+uint8_t checksum(const uint8_t *data, uint32_t length){
+	uint32_t result = 0x0;
+	for (uint32_t n=0 ; n<length ; n++ ) {
+		result += data[n];
+	}
+	result += result>>8;
+	return ~((uint8_t)result);
 }
 
 uint32_t bytes_to_int(uint8_t *data){
@@ -127,6 +132,30 @@ void sent_packet(int seq_num, uint8_t *data, int data_length, int sd, struct soc
 	printf("Send packet NO: %d\n", seq_num);
 	if(sendto(sd, packet, (size_t) (data_length + 10), 0, (struct sockaddr *) &in_name, sizeof in_name) < 0)
 		perror("send");
+}
+
+uint32_t fill_buffer(frame * data, uint32_t sz, uint32_t wl, uint32_t wr, FileReader &reader){
+	uint32_t counter = 0;
+	if(wl < wr){
+		for(int i=wr;i<sz && reader.rem_size > 0;++i){
+			data[i].length = std::min(reader.rem_size, (size_t)MAX_DATA_LENGTH);
+			reader.read_data(data[i].data, data[i].length);	
+			++counter;
+		}
+		for(int i=0;i<=wl && reader.rem_size > 0;++i){
+			data[i].length = std::min(reader.rem_size, (size_t)MAX_DATA_LENGTH);
+			reader.read_data(data[i].data, data[i].length);	
+			++counter;
+		}
+	}
+	else{
+		for(int i=wr;i<=wl && reader.rem_size > 0;++i){
+			data[i].length = std::min(reader.rem_size, (size_t)MAX_DATA_LENGTH);
+			reader.read_data(data[i].data, data[i].length);	
+			++counter;
+		}
+	}
+	return counter;
 }
 
 int main(int argc, char **argv){
@@ -167,7 +196,8 @@ int main(int argc, char **argv){
 
 	int lar =0, lfs = 0;
 	frame *data = (frame *) malloc(buff_size * sizeof(frame));
-	uint8_t resp[7];
+	uint32_t rem_buff_size = 0;
+	uint8_t resp[6];
 	std::queue<pack_timeout> timeout;
 
 	printf("No Of frame :%d\n", num_of_packet);
@@ -175,31 +205,24 @@ int main(int argc, char **argv){
 	/* Sliding Window */
 	while(lar < num_of_packet){
 		/* Proccess timeout */
-		// for(int i=lar+1;i<=lfs;++i){
-		// 	int idx = i % window_size;
-		// 	if(data[idx].timeout < time(NULL)){
-		// 		send_packet(i, data[idx].data, data[idx].length, sd, in_name);
-		// 		data[idx].timeout = time(NULL)+timeout_limit;
-		// 	}
-		// }
-		while(!timeout.empty() && timeout.front().timeout < time(NULL)){
-			pack_timeout tmp = timeout.front();
-			timeout.pop();
-			if(tmp.packet_no <= lar)
-				continue;
-			int idx = lfs % window_size;
-			sent_packet(lfs, data[idx].data, data[idx].length, sd, in_name);
-			tmp.timeout = time(NULL) + timeout_limit;
-			timeout.push(tmp);
+		for(int i=lar+1;i<=lfs;++i){
+			int idx = i % buff_size;
+			if(data[idx].timeout < time(NULL)){
+				sent_packet(i, data[idx].data, data[idx].length, sd, in_name);
+				data[idx].timeout = time(NULL)+timeout_limit;
+			}
 		}
 
 		/* Sending Data */
 		while(lfs < num_of_packet && lfs-lar < window_size){
-			int idx = ++lfs % window_size;
-			data[idx].length = std::min(reader.rem_size, (size_t) MAX_DATA_LENGTH);
-			reader.read_data(data[idx].data, data[idx].length);
+			if(rem_buff_size == 0){
+				rem_buff_size = fill_buffer(data, buff_size, lar % buff_size, (lfs+1) % buff_size, reader);
+			}
+			int idx = ++lfs % buff_size;
+			// data[idx].length = std::min(reader.rem_size, (size_t) MAX_DATA_LENGTH);
 			sent_packet(lfs, data[idx].data, data[idx].length, sd, in_name);
-			timeout.push({lfs, time(NULL)+timeout_limit});
+			data[idx].timeout = time(NULL) + timeout_limit;
+			--rem_buff_size;
 		}
 
 		/* Get Response */
@@ -209,12 +232,14 @@ int main(int argc, char **argv){
 			if(verify_response(resp, tmp_len)){
 				int seq_num = bytes_to_int(resp+1)-1;
 				if(resp[0] == NAK_NUMBER){
-
+					printf("recieve NAK: %d : ", seq_num);
+					printf("%d %d %d %d %d %d\n", (int)resp[0], (int)resp[1], (int)resp[2], (int)resp[3], (int)resp[4], (int)resp[5]);
+					data[seq_num%buff_size].timeout = 0;
 				}
-				else{
+				else if(resp[0] == ACK_NUMBER){
 					printf("recieve ACK: %d : ", seq_num);
 					printf("%d %d %d %d %d %d\n", (int)resp[0], (int)resp[1], (int)resp[2], (int)resp[3], (int)resp[4], (int)resp[5]);
-					lar = std::max(lar, seq_num);	
+					lar = std::max(lar, seq_num);
 				}
 			}
 		}

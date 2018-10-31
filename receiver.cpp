@@ -27,7 +27,7 @@ class FileWriter
 {
 public:
 	FileWriter(char *filename, uint32_t buffer_size) : max_buffer_size(buffer_size){
-		writer = fopen(filename, "wb");
+		writer = fopen(filename, "wb+");
 		buffer = (uint8_t *) malloc(max_buffer_size);
 		offset = 0;
 	}
@@ -56,9 +56,13 @@ private:
 	}
 };
 
-uint8_t checksum(const uint8_t *data, uint32_t len){
-	/* Not Finish */
-	return 0;
+uint8_t checksum(const uint8_t *data, uint32_t length){
+	uint32_t result = 0x0;
+	for (int n=0 ; n<length ; n++ ) {
+		result += data[n];
+	}
+	result += result>>8;
+	return ~((uint8_t)result);
 }
 
 bool verify_packet(const uint8_t *data, uint32_t len){
