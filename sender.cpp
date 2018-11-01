@@ -12,7 +12,7 @@
 #include <algorithm>
 
 #define MAX_DATA_LENGTH 1024
-#define timeout_limit 1
+#define timeout_limit 2
 #define ACK_NUMBER 0x6
 #define NAK_NUMBER 0x21
 
