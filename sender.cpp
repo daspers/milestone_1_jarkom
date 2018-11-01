@@ -259,8 +259,14 @@ int main(int argc, char **argv){
 			}
 		}
 	}
-	sent_packet(++lfs, (uint8_t *)"", 0, sd, in_name);
-
+	for(int i=1;i<20;++i){
+		sent_packet(++lfs, (uint8_t *)"", 0, sd, in_name);
+		int tmp_len = recvfrom(sd, resp, 10, 0, (struct sockaddr *) &in_name, &addrlen);
+		if(tmp_len > 0 && verify_response(resp, tmp_len)){
+			if(resp[0] == ACK_NUMBER)
+				break;
+		}
+	}
 	close(sd);
 	return 0;
 }

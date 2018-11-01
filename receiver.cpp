@@ -152,7 +152,6 @@ int main(int argc, char **argv){
 					if(data[idx].seq_num != seq_num){
 						data[idx].seq_num = seq_num;
 						data[idx].length = bytes_to_int(packet+5);
-						if(data[idx].length==0) break;
 						memcpy(data[idx].data, packet+9, data[idx].length);
 						
 						/* Move Window */
@@ -166,6 +165,11 @@ int main(int argc, char **argv){
 
 				/* Send ACK */
 				send_resp(ACK_NUMBER, lfr+1, sd, my_addr);
+				if(bytes_to_int(packet+5) == 0){
+					// for(int i=1;i<5;++i)
+					// 	send_resp(ACK_NUMBER, lfr+1, sd, my_addr);
+					break;
+				}
 			}
 			else
 				send_resp(NAK_NUMBER, lfr+1, sd, my_addr);
