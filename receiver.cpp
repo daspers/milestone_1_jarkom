@@ -120,7 +120,7 @@ int main(int argc, char **argv){
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	my_addr.sin_port = htons(atoi(port));
-	printf("%d\n", my_addr.sin_addr.s_addr);
+	// printf("%d\n", my_addr.sin_addr.s_addr);
 	
 	if(bind(sd, (struct sockaddr *) &my_addr, sizeof my_addr) < 0){
 		perror("bind failed");

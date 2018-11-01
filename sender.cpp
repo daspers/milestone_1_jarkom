@@ -215,7 +215,7 @@ int main(int argc, char **argv){
 	uint8_t resp[6];
 	std::queue<pack_timeout> timeout;
 
-	printf("No Of frame :%d\n", num_of_packet);
+	// printf("No Of frame :%d\n", num_of_packet);
 
 	/* Sliding Window */
 	while(lar < num_of_packet){
