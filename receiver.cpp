@@ -90,12 +90,12 @@ void fill_int_to_bytes(uint8_t *data, uint32_t val){
 }
 
 void send_resp(int head, int n_seq_num, int sd, sockaddr_in &my_addr){
-	printf("Send ack %d : ", n_seq_num);
+	// printf("Send ack %d : ", n_seq_num);
 	uint8_t ack[6];
 	ack[0] = head;
 	fill_int_to_bytes(ack+1, n_seq_num);
 	ack[5] = checksum(ack, 5);
-	printf("%d %d %d %d %d %d\n", (int)ack[0], (int)ack[1], (int)ack[2], (int)ack[3], (int)ack[4], (int)ack[5]);
+	// printf("%d %d %d %d %d %d\n", (int)ack[0], (int)ack[1], (int)ack[2], (int)ack[3], (int)ack[4], (int)ack[5]);
 	if(sendto(sd, ack, 6, 0, (struct sockaddr *) &my_addr, sizeof my_addr) < 0)
 		perror("sendto ack");
 }
@@ -141,12 +141,12 @@ int main(int argc, char **argv){
 
 		/* Read Incoming packet */
 		int recvlen = recvfrom(sd, packet, MAX_DATA_LENGTH+10, 0, (struct sockaddr *) &my_addr, &addrlen);
-		printf("receive %d %d\n", recvlen, (int)packet[0]);
+		// printf("receive %d %d\n", recvlen, (int)packet[0]);
 		if(recvlen > 0 && recvlen <= MAX_DATA_LENGTH+10){
 			if(verify_packet(packet, recvlen)){
-				printf("Packet size : %d\n", recvlen);
+				// printf("Packet size : %d\n", recvlen);
 				int seq_num = bytes_to_int(packet+1);
-				printf("Packet receive no : %d\n", seq_num);
+				// printf("Packet receive no : %d\n", seq_num);
 				if(seq_num > lfr && seq_num <= laf){
 					int idx = seq_num % window_size;
 					if(data[idx].seq_num != seq_num){
@@ -162,10 +162,10 @@ int main(int argc, char **argv){
 						}
 						laf = lfr + window_size;
 					}
-					
-					/* Send ACK */
-					send_resp(ACK_NUMBER, lfr+1, sd, my_addr);
 				}
+
+				/* Send ACK */
+				send_resp(ACK_NUMBER, lfr+1, sd, my_addr);
 			}
 			else
 				send_resp(NAK_NUMBER, lfr+1, sd, my_addr);

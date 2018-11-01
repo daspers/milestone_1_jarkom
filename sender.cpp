@@ -45,7 +45,7 @@ public:
 	FileReader(char *filename, uint32_t buffer_size) : max_buffer_size(buffer_size){
 		struct stat st;
 		reader = fopen(filename, "rb");
-		buffer = (uint8_t *) malloc(max_buffer_size);
+		buffer = (uint8_t *) malloc(max_buffer_size+10);
 		fill_buffer();
 		stat(filename, &st);
 		rem_size = size = st.st_size;
@@ -120,6 +120,21 @@ bool verify_response(const uint8_t *data, uint32_t len){
 	return checksum(data, len-1) == data[len-1];
 }
 
+void show_percentage(int now, int overall){
+	now *= 100;
+	now /= overall;
+	printf("\r%3d%% [", now);
+	for(int i=1;i<now;++i){
+		printf("=");
+	}
+	if(now)
+		printf(">");
+	for(int i=now+1;i<=100;++i)
+		printf(" ");
+	printf("]");
+	fflush(stdout);
+}
+
 void sent_packet(int seq_num, uint8_t *data, int data_length, int sd, struct sockaddr_in &in_name){
 	uint8_t packet[MAX_DATA_LENGTH + 10];
 	packet[0] = 0x1;
@@ -129,7 +144,7 @@ void sent_packet(int seq_num, uint8_t *data, int data_length, int sd, struct soc
 	// checksum begin not ready :(
 	packet[data_length+9] = checksum(packet, data_length+9);
 	// checksum end
-	printf("Send packet NO: %d\n", seq_num);
+	// printf("Send packet NO: %d\n", seq_num);
 	if(sendto(sd, packet, (size_t) (data_length + 10), 0, (struct sockaddr *) &in_name, sizeof in_name) < 0)
 		perror("send");
 }
@@ -228,17 +243,17 @@ int main(int argc, char **argv){
 		/* Get Response */
 		int tmp_len;
 		while((tmp_len = recvfrom(sd, resp, 10, 0, (struct sockaddr *) &in_name, &addrlen)) >= 0){
-			printf("Get response %d\n", tmp_len);
+			// printf("Get response %d\n", tmp_len);
 			if(verify_response(resp, tmp_len)){
 				int seq_num = bytes_to_int(resp+1)-1;
-				if(resp[0] == NAK_NUMBER){
-					printf("recieve NAK: %d : ", seq_num);
-					printf("%d %d %d %d %d %d\n", (int)resp[0], (int)resp[1], (int)resp[2], (int)resp[3], (int)resp[4], (int)resp[5]);
+				if(resp[0] == NAK_NUMBER && seq_num > lar && seq_num <= lfs){
+					// printf("recieve NAK: %d : ", seq_num);
+					// printf("%d %d %d %d %d %d\n", (int)resp[0], (int)resp[1], (int)resp[2], (int)resp[3], (int)resp[4], (int)resp[5]);
 					data[seq_num%buff_size].timeout = 0;
 				}
 				else if(resp[0] == ACK_NUMBER){
-					printf("recieve ACK: %d : ", seq_num);
-					printf("%d %d %d %d %d %d\n", (int)resp[0], (int)resp[1], (int)resp[2], (int)resp[3], (int)resp[4], (int)resp[5]);
+					// printf("recieve ACK: %d : ", seq_num);
+					// printf("%d %d %d %d %d %d\n", (int)resp[0], (int)resp[1], (int)resp[2], (int)resp[3], (int)resp[4], (int)resp[5]);
 					lar = std::max(lar, seq_num);
 				}
 			}
