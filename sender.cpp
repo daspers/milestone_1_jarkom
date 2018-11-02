@@ -203,7 +203,7 @@ int main(int argc, char **argv){
 	/* Timeout */
 	struct timeval tv;
 	tv.tv_sec = 0;
-	tv.tv_usec = 50;
+	tv.tv_usec = 20;
 	setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, (const char *) &tv, sizeof tv); 
 
 	/* Number of packet */
