@@ -28,7 +28,7 @@ class FileWriter
 public:
 	FileWriter(char *filename, uint32_t buffer_size) : max_buffer_size(buffer_size){
 		writer = fopen(filename, "wb+");
-		buffer = (uint8_t *) malloc(max_buffer_size);
+		buffer = (uint8_t *) malloc(max_buffer_size+1);
 		offset = 0;
 	}
 	~FileWriter(){
@@ -156,6 +156,11 @@ int main(int argc, char **argv){
 						
 						/* Move Window */
 						while(data[(lfr+1)%window_size].seq_num == lfr+1){
+							idx = (lfr+1)%window_size;
+							// printf("%d %d ", data[idx].seq_num, data[idx].length);
+							// for(int i=0;i<data[idx].length;++i)
+							// 	printf("[%c]", data[idx].data[i]);
+							// puts("");
 							writer.write_data(data[idx].data, data[idx].length);
 							++lfr;
 						}
